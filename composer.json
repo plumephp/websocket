@@ -1,0 +1,13 @@
+{
+    "name": "plumephp/websocket",
+    "type": "project",
+    "license": "BSD2",
+    "minimum-stability": "dev",
+    "require": {
+    },
+    "autoload": {
+        "psr-4": { 
+            "Plume\\WebSocket\\": "src/"
+        }
+    }
+}
