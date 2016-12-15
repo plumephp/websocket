@@ -1,1 +1,0 @@
-php web/index.php
