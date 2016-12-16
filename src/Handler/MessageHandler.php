@@ -41,28 +41,6 @@ class MessageHandler{
         }
     }
 
-    // public function handleCluster($msg){
-    // 	//校验集群节点发送的集群信息 - {url:cluster,data:strdata,uid:uid}
-    // 	if($msg->url !== 'cluster'){
-    // 		return;
-    // 	}
-    // 	//处理集群通知消息,这里不允许执行业务逻辑，仅是消息转发
-    // 	$data = $msg->data;
-    // 	$host = $this->app->getConfig()['server']['master']['host'];
-    // 	//bind关系 - uid:host => fd1,fd2
-    // 	if(empty($msg->uid)){
-    // 		$key = $host;
-    // 	}else{
-    // 		$key = $msg->uid.':'.$host;
-    // 	}
-    // 	$redis = $this->app->provider('redis')->connect();
-    //     $fds = $redis->lrange($key, 0, -1);
-    //     $this->others($fds, $data);
-    //     //转发完毕后回复集群节点
-    //     throw new HandlerException("replay handleCluster from {$key}");
-    // }
-
-
     public function handleRequest($msg){
 		//URL解析格式 - "module/className/action"
 		$urlArr = explode('/', $msg->url);
