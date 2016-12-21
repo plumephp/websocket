@@ -8,10 +8,7 @@
 
 namespace Plume\WebSocket;
 
-use Plume\Provider\ProviderTrait;
-use Plume\Core\ArrayTrait;
-use Plume\Core\ConfigTrait;
-use Plume\WebSocket\Core\ContextTrait;
+use Plume\Core\Application as App;
 use Plume\WebSocket\Core\Client;
 use Plume\WebSocket\Handler\MessageHandler;
 use Plume\WebSocket\Handler\CloseHandler;
@@ -20,14 +17,9 @@ use Swoole\Websocket\Server as swoole_websocket_server;
 use Swoole\Http\Request as swoole_http_request;
 use Swoole\Http\response as swoole_http_response;
 
-class Application implements \ArrayAccess{
+class Application extends App{
 
-    use ProviderTrait;
-    use ArrayTrait;
-    use ConfigTrait;
-	use ContextTrait;
-
-	public $host = '127.0.0.1';
+	public $host = '0.0.0.0';
 	public $port = '9501';
 	private $slaves = array();
 	private $slaves_client = array();
@@ -98,7 +90,9 @@ class Application implements \ArrayAccess{
     }
 
 	public function run(){
-		error_reporting(0);
+		if($this['plume.env'] != 'dev'){
+			error_reporting(0);
+		}
 		$server = $this->server();
 
 		//start server process

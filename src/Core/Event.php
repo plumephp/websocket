@@ -3,18 +3,30 @@ namespace Plume\WebSocket\Core;
 
 
 use Plume\WebSocket\Core\Client;
+use Plume\Core\ApplicationTrait;
+use Plume\Core\Application as App;
 use Swoole\Websocket\Server as swoole_websocket_server;
 
 class Event{
 
-	protected $app;
+    use ApplicationTrait;
+
+    protected $app;
+
+    public function initModule($rootPath, $env){
+        $this->app = new App($env);
+        $this->app['plume.root.path'] = $rootPath;
+    }
+
+
+	protected $app_server;
     protected $server;
     protected $frame;
     protected $fd;
     protected $host;
 
-    public function __construct($app, swoole_websocket_server $server, $frame, $isClose = false) {
-    	$this->app = $app;
+    public function __construct($app_server, swoole_websocket_server $server, $frame, $isClose = false) {
+    	$this->app_server = $app_server;
         $this->server = $server;
         $this->frame = $frame;
         if($isClose === false){
@@ -22,8 +34,7 @@ class Event{
         }else{
             $this->fd = $frame;
         }
-        $this->host = $this->app->getConfig()['server']['master']['host'];
-        
+        $this->host = $this->app_server->getConfig()['server']['master']['host'];
     }
 
     // 注：
@@ -37,7 +48,7 @@ class Event{
     public function broadcast($data) {
         $this->broadcastself($data);
         // 通知其它集群节点
-        $slaves_client = $this->app->slaves();
+        $slaves_client = $this->app_server->slaves();
         $this->debug('broadcast - slaves - number', count($slaves_client));
         foreach ($slaves_client as $key => $value) {
             $this->debug('broadcast - slaves', "host index {$key}");
@@ -87,8 +98,8 @@ class Event{
     }
 
     public function bind($data){
-        $redis = $this->app->provider('redis')->connect();
-        $host = $this->app->getConfig()['server']['master']['host'];
+        $redis = $this->app_server->provider('redis')->connect();
+        $host = $this->app_server->getConfig()['server']['master']['host'];
         //处理uid和host的bind关系 - 
         if(empty($data->uid)){
             //host,为了区分是否需要对uid以外的fd广播问题
@@ -100,7 +111,7 @@ class Event{
     }
 
     protected function debug($title, $info){
-        $this->app->provider('log')->debug($title, $info);
+        $this->app_server->provider('log')->debug($title, $info);
     }
 
 }

@@ -29,7 +29,6 @@ class MessageHandler{
         	if(empty($msg) || empty($msg->url) || empty($msg->data)){
 				throw new HandlerException('data format error : it is json with url and data property?');
 			}
-			// $this->handleCluster($msg);
             $classInfo = $this->handleRequest($msg);
             //处理消息绑定关系
 	        // $this->bind($msg);
@@ -51,33 +50,22 @@ class MessageHandler{
         $className = ucfirst($urlArr[1]);
         $action = ucfirst($urlArr[2]);
     	$classFullName = "{$module}\\{$className}";
+        $configPath = $this->app['plume.root.path'].'/modules/'.$module.'/';
     	if (!class_exists($classFullName)) {
     		throw new HandlerException("url {$classFullName} is not exist");
     	}
-    	return array('classname' => $classFullName, 'action' => $action, 'data' => $msg->data);
+    	return array('classname' => $classFullName, 'action' => $action, 'data' => $msg->data, 'configPath' => $configPath);
 	}
-
-
-	// public function bind($msg){
- //        $redis = $this->app->provider('redis')->connect();
- //        $host = $this->app->getConfig()['server']['master']['host'];
- //        //处理uid和host的bind关系 - 
- //        if(empty($msg->uid)){
- //            //host,为了区分是否需要对uid以外的fd广播问题
- //            $redis->rpush($host, $this->fd);
- //        }else{
- //            //uid:host->fd1,fd2
- //            $redis->rpush($msg->uid.':'.$host, $this->fd);
- //        }
- //    }
 
 
 	public function exec($classInfo){
 		$classFullName = $classInfo['classname'];
 		$action = $classInfo['action'];
 		$data = $classInfo['data'];
+        $configPath = $classInfo['configPath'];
     	try {
 	        $class = new $classFullName($this->app, $this->server, $this->frame);
+            $class->initModule($configPath, $this->app['plume.env']);
         	call_user_func_array(array($class, $action), array($data));
         } catch (\Exception $e) {
         	throw new HandlerException("call func exception : ".$e->getMessage());
@@ -89,13 +77,6 @@ class MessageHandler{
         $json_data = json_encode($data, JSON_UNESCAPED_UNICODE);
         $this->server->push($this->frame->fd, $json_data);
     }
-
-    // // 通知其他终端
-    // protected function others($fds, $data) {
-    //     $json_data = json_encode($data, JSON_UNESCAPED_UNICODE);
-    //     var_dump($data);
-    //     // $this->server->push($this->frame->fd, $json_data);
-    // }
 
     private function debug($title, $info){
 		$this->app->provider('log')->debug($title, $info);
