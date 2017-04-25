@@ -12,13 +12,18 @@ class Cluster extends Event{
 		$this->replay($data.'pong', false);
 	}
 
-	public function bind($uid){
-
-	}
-
-	//校验集群节点发送的集群信息 - {"url":"plume/cluster/broadcast","data":{"data":"yourdata","uid":"youruid"}}
-	//TODO:提供对外访问的url接口
-	public function broadcast($data){
+	public function notify($data){
+		$msg = json_decode($data, true);
+		if(!isset($msg['data'])){
+			$this->debug('notify', 'data is null');
+			return;
+		}
+		$this->debug('notify - data', $msg);
+		if(isset($msg['uid']) && !empty($msg['uid'])){
+			$this->broadcastself($msg['data'], $msg['uid']);
+		}else{
+			$this->broadcastself($msg['data']);
+		}
 	}
 
 }

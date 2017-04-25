@@ -89,7 +89,7 @@ class Client{
         $data = $this->socket->recv();
         if ($data === false)
         {
-            echo "Error: {$this->socket->errMsg}";
+            // echo "Error: {$this->socket->errMsg}";
             return false;
         }
         $this->buffer .= $data;
@@ -154,7 +154,7 @@ class Client{
         "Origin: {$this->origin}" . "\r\n" .
         "Host: {$host}:{$this->port}" . "\r\n" .
         "Sec-WebSocket-Key: {$this->key}" . "\r\n" .
-        "User-Agent: PHPWebSocketClient/" . self::VERSION . "\r\n" .
+        "User-Agent: cluster_client" . "\r\n" .
         "Upgrade: websocket" . "\r\n" .
         "Connection: Upgrade" . "\r\n" .
         "Sec-WebSocket-Protocol: wamp" . "\r\n" .

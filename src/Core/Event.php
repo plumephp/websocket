@@ -45,42 +45,48 @@ class Event{
     //TODO:是否存在广播除自己外的所有在线终端
 
     // 广播指定终端
-    public function broadcast($data) {
-        $this->broadcastself($data);
+    public function broadcast($data, $uid = '') {
+        $this->broadcastself($data, $uid);
         // 通知其它集群节点
         $slaves_client = $this->app_server->slaves();
         $this->debug('broadcast - slaves - number', count($slaves_client));
         foreach ($slaves_client as $key => $value) {
             $this->debug('broadcast - slaves', "host index {$key}");
             $sendData = new \stdClass();
-            $sendData->url = 'plume/cluster/broadcastself';
+            $sendData->url = 'plume/cluster/notify';
+            $sendData->uid = $uid;
             $sendData->data = $data;
-            $this->debug('broadcast - slaves - dadta', $sendData);
+            $this->debug('broadcast - slaves - data', $sendData);
             $value->send(json_encode($sendData, JSON_UNESCAPED_UNICODE));
         }
     }
 
     // 广播当前服务器终端
-    public function broadcastself($data) {
+    public function broadcastself($data, $uid = '') {
         $this->debug('broadcastself', 'host is '.$this->host);
         $connections = array();
-        if(empty($data->uid)){
+        if(empty($uid)){
             // 获取所有在线终端
             $this->debug('broadcastself', 'uid is empty');
             if (count($this->server->connections) > 0) {
                 $connections = $this->server->connections;
             }
         }else{
-            $this->debug('broadcastself', 'uid is '.$data->uid);
+            $this->debug('broadcastself', 'uid is '.$uid);
             // 获取所有在线uid绑定终端
-            $key = $data->uid.':'.$host;
+            $key = $uid.':'.$host;
             $connections = $redis->lrange($key, 0, -1);
         }
         // 广播终端
         $this->debug('broadcastself', 'broadcast connections');
         $json_data = json_encode($data, JSON_UNESCAPED_UNICODE);
         $this->debug('broadcastself - data', $data);
+        $this->debug('broadcastself - slaves_fds', $this->app_server->slaves_fd);
         foreach ($connections as $fd) {
+            if(isset($this->app_server->slaves_fd[$fd])){
+                $this->debug('broadcastself', 'slave client fd is '.$fd);
+                continue;
+            }
             $this->server->push($fd, $json_data);
         }
         
@@ -90,24 +96,48 @@ class Event{
 
     // 通知来源终端
     public function replay($data, $encode = true) {
+        $this->push($this->fd, $data, $encode);
+    }
+
+    // 通知指定终端
+    public function push($fd, $data, $encode = true) {
         $json_data = $data;
         if($encode){
             $json_data = json_encode($data, JSON_UNESCAPED_UNICODE);    
         }
-        $this->server->push($this->fd, $json_data);
+        $this->server->push($fd, $json_data);
     }
 
-    public function bind($data){
+    // 关闭指定终端
+    public function closefd($fd){
+        $this->server->close($fd);
+    }
+
+    //绑定的几种状态:
+    //1.无命名空间
+    //list => host->fd (获取当前节点的在线用户);
+    //key-value => host:fd->value (获取当前节点当地前连接的数据)
+    //2.命名空间
+    //list => uid:host->fd (获取当前节点的在线用户);
+    //key-value => host:fd->value (获取当前节点当地前连接的数据)
+    
+    public function bind($value, $uid = ''){
         $redis = $this->app_server->provider('redis')->connect();
         $host = $this->app_server->getConfig()['server']['master']['host'];
-        //处理uid和host的bind关系 - 
-        if(empty($data->uid)){
-            //host,为了区分是否需要对uid以外的fd广播问题
+        if(empty($uid)){
             $redis->rpush($host, $this->fd);
+            $redis->set($host.':'.$this->fd, $value);
         }else{
-            //uid:host->fd1,fd2
-            $redis->rpush($data->uid.':'.$host, $this->fd);
+            $redis->rpush($uid.':'.$host, $this->fd);
+            $redis->set($host.':'.$this->fd, $value);
         }
+    }
+
+    public function getBindValue(){
+        $redis = $this->app_server->provider('redis')->connect();
+        $host = $this->app_server->getConfig()['server']['master']['host'];
+        $value = $redis->get($host.':'.$this->fd);
+        return $value;
     }
 
     protected function debug($title, $info){

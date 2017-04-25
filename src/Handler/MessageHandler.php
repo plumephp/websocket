@@ -11,6 +11,8 @@ class MessageHandler{
 	protected $app;
 	protected $fd;
 	protected $data;
+    protected $defaultClass;
+    protected $key_url;
 
 	public function __construct($app, $server, $frame) {
     	$this->app = $app;
@@ -18,21 +20,22 @@ class MessageHandler{
     	$this->frame = $frame;
     	$this->fd = $frame->fd;
     	$this->data = $frame->data;
+        $this->defaultClass = isset($this->app['plume.ws.msg.url.default'])?$this->app['plume.ws.msg.url.default']:'';
+        $this->key_url = isset($this->app['plume.ws.msg.url.key'])?$this->app['plume.ws.msg.url.key']:'url';
     }
 
     public function handle(){
 		//数据格式约定为JSON
-        $msg = json_decode($this->data);
+        $msg = json_decode($this->data, true);
         //处理消息的URL
         try {
         	//校验客户端发送数据格式 - {url:'modules/eventClassName/action',data:strdata}
-        	if(empty($msg) || empty($msg->url) || empty($msg->data)){
+        	if(empty($msg) || (!isset($msg[$this->key_url]) && !isset($msg['url'])) || !isset($msg['data'])){
 				throw new HandlerException('data format error : it is json with url and data property?');
 			}
             $classInfo = $this->handleRequest($msg);
-            //处理消息绑定关系
-	        // $this->bind($msg);
 	        //执行url对应类
+            $classInfo['data'] = $this->data;
             $this->exec($classInfo);
         } catch (HandlerException $e) {
             $this->debug('MessageHandler', $e->getMessage());
@@ -42,7 +45,12 @@ class MessageHandler{
 
     public function handleRequest($msg){
 		//URL解析格式 - "module/className/action"
-		$urlArr = explode('/', $msg->url);
+        if(isset($msg['url'])){
+            $urlArr = explode('/', $msg['url']);    
+        }else{
+            $msg[$this->key_url] = $this->defaultClass.'/'.$msg[$this->key_url];
+            $urlArr = explode('/', $msg[$this->key_url]);
+        }
 		if(count($urlArr) != 3){
 			throw new HandlerException('data format error : url is like module/className/action ?');
 		}
@@ -54,7 +62,7 @@ class MessageHandler{
     	if (!class_exists($classFullName)) {
     		throw new HandlerException("url {$classFullName} is not exist");
     	}
-    	return array('classname' => $classFullName, 'action' => $action, 'data' => $msg->data, 'configPath' => $configPath);
+    	return array('classname' => $classFullName, 'action' => $action, 'configPath' => $configPath);
 	}
 
 
