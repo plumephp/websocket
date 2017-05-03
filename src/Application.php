@@ -20,85 +20,86 @@ use Swoole\Http\response as swoole_http_response;
 
 class Application extends App{
 
-	public $host = '0.0.0.0';
+	public $host = '127.0.0.1';
+    public $allowIP = '0.0.0.0';
 	public $port = '9501';
 	private $workerNum = 1;
-	private $slaves = array();
-	private $slaves_client = array();
-	public $slaves_fd = array();
+	private $nodes = array();
+	private $nodeClients = array();
+	public $nodeFDs = array();
 
     public function __construct($env = 'dev') {
         $this['plume.env'] = $env;
         $this['plume.root.path'] = __DIR__.'/../../../../';
     }
 
-    public function slaves(){
-		//init slaves_client
-		foreach ($this->slaves as $key => $value) {
+    public function initNodes(){
+		//init cluster node clients
+		foreach ($this->nodes as $key => $value) {
 			$host = $value['host'];
 			$port = $value['port'];
 			$isConnected = false;
-			if(isset($this->slaves_client[$host])){
-				$client_exist = $this->slaves_client[$host];
+			if(isset($this->nodeClients[$host])){
+				$client_exist = $this->nodeClients[$host];
 				$result = $client_exist->send('ping');
 				//TODO:如果发现内存占用比较大，则设置缓冲区大小
 				$client_exist->recv();
-				$this->debug('slaves - ping', $result);
+				$this->debug('ping cluster node', $result);
 				if($result > 0){
-					$this->debug('slaves - ping', 'old connection is ok');
+					$this->debug('ping cluster node', 'old connection is ok');
 					$isConnected = true;
 				}else{
 					$client_exist->disconnect();
-					unset($this->slaves_client[$host]);
+					unset($this->nodeClients[$host]);
 				}
 			}
 			if($isConnected == true){
-				$this->debug('slaves', "connect cluster node {$value['host']} is ok");
+				$this->debug('ping cluster node', "connect cluster node {$value['host']} is ok");
 				continue;
 			}else{
 				//TODO:如果host是一个无法ping通的IP则会阻塞
 				$client = new Client($host, $port);
 	            if (!$client->connect()) {
-	            	$this->debug('slaves', "connect cluster node {$value['host']} faild");
+	            	$this->debug('init cluster node client', "connect cluster node {$host} {$port} faild");
 	            	//连接失败后函数结束会自动触发析构函数进行释放
 	            }else{
-	                $this->slaves_client[$host] = $client;
-	                $this->debug('slaves', "connect cluster node {$value['host']} successed");
-	            }	
+	                $this->nodeClients[$host] = $client;
+	                $this->debug('init cluster node client', "connect cluster node {$host} {$port} successed");
+	            }
 			}
         }
-        $slaves_length = count($this->slaves_client);
-        $this->debug('slaves', "init {$slaves_length} slaves");
-        return $this->slaves_client;
+        $nodes_length = count($this->nodeClients);
+        $this->debug('init nodes ', "init {$nodes_length} cluster node clients");
+        return $this->nodeClients;
     }
 
-    private function server(){
+    private function initServer(){
     	$config = $this->getConfig();
-    	//master config
-    	$master = $config['server']['master'];
-        $this->host = $master['host'];
-        $this->port = $master['port'];
-        $this->workerNum = $config['config']['worker_num'];
-        //slaves config
-    	$this->slaves = $config['server']['slaves'];
-    	//clear bind fd
+    	//local server config
+    	$server = $config['server_config'];
+        $this->host = $server['host'];
+        $this->port = $server['port'];
+        $this->allowIP = $server['allow_ip'];
+        $this->workerNum = $config['swoole_config']['worker_num'];
+        //cluster nodes config
+    	$this->nodes = $config['cluster_nodes'];
+        //clear bind fd
     	$redis = $this->provider('redis')->connect();
         $keyList = $redis->keys("*{$this->host}*");
         foreach ($keyList as $key => $value) {
         	$redis->del($value);
         }
         //init server
-		$server = new swoole_websocket_server($this->host, $this->port, SWOOLE_PROCESS);
-		$server->set($config['config']);
+		$server = new swoole_websocket_server($this->allowIP, $this->port, SWOOLE_PROCESS);
+		$server->set($config['swoole_config']);
 		return $server;
     }
 
 	public function run(){
-		if($this['plume.env'] != 'dev'){
-			error_reporting(0);
-		}
-		$server = $this->server();
-
+		//if($this['plume.env'] != 'dev'){
+        error_reporting(0);
+        //}
+		$server = $this->initServer();
 		//start server process
 		$server->on('WorkerStart', function ($serv, $worker_id){
 			$this->debug('WorkerStart', 'server process start success');
@@ -114,7 +115,7 @@ class Application extends App{
 			$this->debug('open', 'one client has connected');
 			$header = $request->header;
 			if(isset($header['user-agent']) && ($header['user-agent'] === 'cluster_client')){
-				$this->slaves_fd[$request->fd] = $request->fd;
+				$this->nodeFDs[$request->fd] = $request->fd;
 			}
 		});
 
@@ -138,7 +139,7 @@ class Application extends App{
 		$server->on('close', function (swoole_websocket_server $_server , $fd) {
 			$this->debug('close', 'fd:'.$fd);
 			//过滤slave client socket的fd
-			if(isset($this->slaves_fd[$fd])){
+			if(isset($this->nodeFds[$fd])){
 				return;
 			}
 		    try {
@@ -156,16 +157,12 @@ class Application extends App{
 			$server = $request->server;
 			if(isset($server['request_uri']) && (strpos($server['request_uri'], 'wslist') > 0)){
 				//JSON support
-				 $wslist = array('ws://127.0.0.1:9501', 'ws://localhost:9502');
-				// $response->end(json_encode($wslist));
-				//JSONP support
-				// $wslist = array(
-				// 	'wslist' => 'test',
-				// 	'callback' => 'success'
-				// 	);
-				$wslistJson = json_encode($wslist);
-				$response->end("success({$wslistJson});");
-				// $response->end('{wslist:"test",callback:"success"}');
+                $config = $this->getConfig();
+                //ws list config
+                //array('ws://127.0.0.1:9501', 'ws://localhost:9502')
+                $wsList = $config['ws_list'];
+				$wsListJson = json_encode($wsList);
+				$response->end("success({$wsListJson});");
 			}else{
 				$response->end("<h1>This is Swoole WebSocket Server</h1>");
 			}
@@ -181,7 +178,7 @@ class Application extends App{
   //           }
 		// 	return true;
 		// });
-		echo "server listen on {$this->host}:{$this->port}";
+		echo "server listen on {$this->host}:{$this->port} allow ip is {$this->allowIP}".PHP_EOL;
 		$server->start();
 	}
 

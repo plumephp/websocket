@@ -1,13 +1,13 @@
 <?php
 
-namespace Plume;
+namespace PlumeWSService;
 
 use Plume\WebSocket\Core\Event;
 use Plume\WebSocket\Handler\HandlerException;
 
 class Cluster extends Event{
 
-	//{"url":"plume/cluster/ping","data":"ping"}
+	//{"url":"plumeWSService/cluster/ping","data":"ping"}
 	public function ping($data){
 		$this->replay($data.'pong', false);
 	}

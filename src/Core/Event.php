@@ -34,7 +34,7 @@ class Event{
         }else{
             $this->fd = $frame;
         }
-        $this->host = $this->app_server->getConfig()['server']['master']['host'];
+        $this->host = $this->app_server->getConfig()['server_config']['host'];
     }
 
     // 注：
@@ -48,12 +48,12 @@ class Event{
     public function broadcast($data, $uid = '') {
         $this->broadcastself($data, $uid);
         // 通知其它集群节点
-        $slaves_client = $this->app_server->slaves();
+        $slaves_client = $this->app_server->initNodes();
         $this->debug('broadcast - slaves - number', count($slaves_client));
         foreach ($slaves_client as $key => $value) {
             $this->debug('broadcast - slaves', "host index {$key}");
             $sendData = new \stdClass();
-            $sendData->url = 'plume/cluster/notify';
+            $sendData->url = 'plumeWSService/cluster/notify';
             $sendData->uid = $uid;
             $sendData->data = $data;
             $this->debug('broadcast - slaves - data', $sendData);
@@ -81,9 +81,9 @@ class Event{
         $this->debug('broadcastself', 'broadcast connections');
         $json_data = json_encode($data, JSON_UNESCAPED_UNICODE);
         $this->debug('broadcastself - data', $data);
-        $this->debug('broadcastself - slaves_fds', $this->app_server->slaves_fd);
+        $this->debug('broadcastself - node_fds', $this->app_server->nodeFDs);
         foreach ($connections as $fd) {
-            if(isset($this->app_server->slaves_fd[$fd])){
+            if(isset($this->app_server->nodeFDs[$fd])){
                 $this->debug('broadcastself', 'slave client fd is '.$fd);
                 continue;
             }
@@ -123,7 +123,7 @@ class Event{
     
     public function bind($value, $uid = ''){
         $redis = $this->app_server->provider('redis')->connect();
-        $host = $this->app_server->getConfig()['server']['master']['host'];
+        $host = $this->app_server->getConfig()['server_config']['host'];
         if(empty($uid)){
             $redis->rpush($host, $this->fd);
             $redis->set($host.':'.$this->fd, $value);
@@ -135,7 +135,7 @@ class Event{
 
     public function getBindValue(){
         $redis = $this->app_server->provider('redis')->connect();
-        $host = $this->app_server->getConfig()['server']['master']['host'];
+        $host = $this->app_server->getConfig()['server_config']['host'];
         $value = $redis->get($host.':'.$this->fd);
         return $value;
     }
