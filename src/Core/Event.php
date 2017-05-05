@@ -73,8 +73,9 @@ class Event{
             }
         }else{
             $this->debug('broadcastself', 'uid is '.$uid);
+            $redis = $this->app_server->provider('redis')->connect();
             // 获取所有在线uid绑定终端
-            $key = $uid.':'.$host;
+            $key = $uid.':'.$this->host;
             $connections = $redis->lrange($key, 0, -1);
         }
         // 广播终端
@@ -89,7 +90,6 @@ class Event{
             }
             $this->server->push($fd, $json_data);
         }
-        
     }
 
     //TODO:没有广播指定fd终端的需求，因为fd没有任何意义
