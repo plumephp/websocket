@@ -35,7 +35,7 @@ class MessageHandler{
 			}
             $classInfo = $this->handleRequest($msg);
 	        //执行url对应类
-            $classInfo['data'] = $msg;
+            $classInfo['data'] = $this->data;
             $this->exec($classInfo);
         } catch (HandlerException $e) {
             $this->debug('MessageHandler', $e->getMessage());
