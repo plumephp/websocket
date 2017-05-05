@@ -35,7 +35,7 @@ class MessageHandler{
 			}
             $classInfo = $this->handleRequest($msg);
 	        //执行url对应类
-            $classInfo['data'] = $this->data;
+            $classInfo['data'] = $msg;
             $this->exec($classInfo);
         } catch (HandlerException $e) {
             $this->debug('MessageHandler', $e->getMessage());
@@ -46,7 +46,7 @@ class MessageHandler{
     public function handleRequest($msg){
 		//URL解析格式 - "module/className/action"
         if(isset($msg['url'])){
-            $urlArr = explode('/', $msg['url']);    
+            $urlArr = explode('/', $msg['url']);
         }else{
             $msg[$this->key_url] = $this->defaultClass.'/'.$msg[$this->key_url];
             $urlArr = explode('/', $msg[$this->key_url]);
