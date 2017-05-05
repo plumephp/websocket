@@ -121,7 +121,7 @@ class Event{
     //list => uid:host->fd (获取当前节点的在线用户);
     //key-value => host:fd->value (获取当前节点当地前连接的数据)
     
-    public function bind($value, $uid = ''){
+    public function bind($uid = '', $value = ''){
         $redis = $this->app_server->provider('redis')->connect();
         $host = $this->app_server->getConfig()['server_config']['host'];
         if(empty($uid)){
