@@ -137,6 +137,7 @@ class Application extends App{
 		//open event behind connected
 		$server->on('open',function (swoole_websocket_server $_server , swoole_http_request $request) {
 			$this->debug('open', 'one client has connected');
+            $this->debug('open clients number', count($_server->connections));
 			$header = $request->header;
 			if(isset($header['user-agent']) && ($header['user-agent'] === 'cluster_client')){
 				$this->nodeFDs[$request->fd] = $request->fd;
