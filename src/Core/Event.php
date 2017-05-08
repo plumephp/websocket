@@ -110,7 +110,6 @@ class Event{
         }
         // 广播获取的在线终端
         $this->debug('broadcastself', 'broadcast connections');
-        $json_data = json_encode($data, JSON_UNESCAPED_UNICODE);
         $this->debug('broadcastself - data', $data);
         $this->debug('broadcastself - node_fds', $this->app_server->nodeFDs);
         foreach ($connections as $fd) {
@@ -198,7 +197,7 @@ class Event{
     /**
      * 记录调试日志
      * @param string $title 日志内容标题
-     * @param mixed $info 日志数据
+     * @param mixed $info 日志数据 string|array
      */
     protected function debug($title, $info){
         $this->app_server->provider('log')->debug($title, $info);
