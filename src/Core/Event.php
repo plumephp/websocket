@@ -98,7 +98,9 @@ class Event{
         if(empty($groupID)){
             // 获取所有无分组标识在线终端
             $this->debug('broadcastself', 'groupID is empty');
-            if (count($this->server->connections) > 0) {
+            $onlines = count($this->server->connections);
+            $this->debug('broadcastself', 'connection number is '.$onlines);
+            if ($onlines > 0) {
                 $connections = $this->server->connections;
             }
         }else{
@@ -117,7 +119,7 @@ class Event{
                 $this->debug('broadcastself', 'nodeClient fd is '.$fd);
                 continue;
             }
-            $this->server->push($fd, $json_data);
+            $this->push($fd, $data);
         }
     }
 
@@ -141,6 +143,7 @@ class Event{
         if($encode){
             $json_data = json_encode($data, JSON_UNESCAPED_UNICODE);
         }
+        $this->debug('push - data', $json_data);
         $this->server->push($fd, $json_data);
     }
 
