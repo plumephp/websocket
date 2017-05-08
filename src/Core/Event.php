@@ -13,18 +13,37 @@ class Event{
 
     use ApplicationTrait;
 
+    /**
+     * 业务模块应用上下文
+     * @var Plume\Core\Application
+     */
     protected $app;
 
+    /**
+     * 业务模块初始化
+     * @param string $rootPath 业务模块的根目录
+     * @param string $env 业务模块运行的环境 dev|test|pro
+     *
+     */
     public function initModule($rootPath, $env){
         $this->app = new App($env);
         $this->app['plume.root.path'] = $rootPath;
     }
 
-
+    /**
+     * WebSocket服务端应用上下文
+     * @var Plume\Core\Application
+     */
 	protected $app_server;
+
     protected $server;
     protected $frame;
     protected $fd;
+
+    /**
+     * WebSocekt服务端本地IP
+     * @var string
+     */
     protected $host;
 
     public function __construct($app_server, swoole_websocket_server $server, $frame, $isClose = false) {
