@@ -197,6 +197,19 @@ class Event{
         return $value;
     }
 
+    public function status(){
+        $this->debug('Plume WebSocket Server', '----------status----------');
+        $this->debug('status', array(
+            'fd' => $this->fd,
+            'node fds' => $this->app_server->nodeFDs,
+            'bind value' => $this->getBindValue(),
+            'connection nums' => count($this->server->connections),
+            'connections' => $this->server->connections,
+            //'' => '',
+        ));
+        $this->debug('Plume WebSocket Server', '----------status----------');
+    }
+
     /**
      * 记录调试日志
      * @param string $title 日志内容标题
