@@ -1,12 +1,14 @@
 <?php
 namespace Plume\WebSocket\Core;
 
-
 use Plume\WebSocket\Core\Client;
 use Plume\Core\ApplicationTrait;
 use Plume\Core\Application as App;
 use Swoole\Websocket\Server as swoole_websocket_server;
 
+/**
+ * WebSocket客户端通信事件基类
+ */
 class Event{
 
     use ApplicationTrait;
@@ -39,100 +41,134 @@ class Event{
 
     // 注：
     // 1.所有参数均使用对象类型，以便转化为json对象,包含data属性和可选的uid属性
-    // 2.返回结果为{"event":"broadcast","data":{"data":"yourdata","uid":"youruid"}}
+    // 2.返回结果为{"event":"broadcast","data":{"data":"yourdata","gid":"yourgid"}}
     // 3.这里的方法都不会回复相关调用终端，需要在具体实现中处理
 
     //TODO:是否存在广播除自己外的所有在线终端
+    //TODO:是否需要查找fd,并通知集群中指定分组的fd
 
-    // 广播指定终端
-    public function broadcast($data, $uid = '') {
-        $this->broadcastself($data, $uid);
+    /**
+     * 全集群广播事件。对指定数据和分组进行全集群广播。
+     * @param stdClass $data 广播数据
+     * @param string $groupID 分组标识
+     */
+    public function broadcast($data, $groupID = '') {
+        $this->broadcastself($data, $groupID);
         // 通知其它集群节点
-        $slaves_client = $this->app_server->initNodes();
-        $this->debug('broadcast - slaves - number', count($slaves_client));
-        foreach ($slaves_client as $key => $value) {
-            $this->debug('broadcast - slaves', "host index {$key}");
-            $sendData = new \stdClass();
-            $sendData->url = 'plumeWSService/cluster/notify';
-            $sendData->uid = $uid;
-            $sendData->data = $data;
-            $this->debug('broadcast - slaves - data', $sendData);
-            $value->send(json_encode($sendData, JSON_UNESCAPED_UNICODE));
+        $nodeClients = $this->app_server->initNodes();
+        $this->debug('broadcast nodes number', count($nodeClients));
+        foreach ($nodeClients as $key => $nodeClient) {
+            $this->debug('broadcast - notify node info', "host is {$key}");
+            $notifyData = new \stdClass();
+            $notifyData->url = 'plumeWSService/cluster/notify';
+            $notifyData->uid = $groupID;
+            $notifyData->data = $data;
+            $this->debug('broadcast - notify data', $notifyData);
+            $nodeClient->send(json_encode($notifyData, JSON_UNESCAPED_UNICODE));
         }
     }
 
-    // 广播当前服务器终端
-    public function broadcastself($data, $uid = '') {
+    /**
+     * 当前集群节点广播事件。对指定数据和分组对当前集群节点进行广播。
+     * @param stdClass $data 广播数据
+     * @param string $groupID 分组标识
+     */
+    public function broadcastself($data, $groupID = '') {
         $this->debug('broadcastself', 'host is '.$this->host);
         $connections = array();
-        if(empty($uid)){
-            // 获取所有在线终端
-            $this->debug('broadcastself', 'uid is empty');
+        if(empty($groupID)){
+            // 获取所有无分组标识在线终端
+            $this->debug('broadcastself', 'groupID is empty');
             if (count($this->server->connections) > 0) {
                 $connections = $this->server->connections;
             }
         }else{
-            $this->debug('broadcastself', 'uid is '.$uid);
+            // 获取所有分组标识在线终端 key = groupID:host
+            $this->debug('broadcastself', 'groupID is '.$groupID);
             $redis = $this->app_server->provider('redis')->connect();
-            // 获取所有在线uid绑定终端
-            $key = $uid.':'.$this->host;
+            $key = $groupID.':'.$this->host;
             $connections = $redis->lrange($key, 0, -1);
         }
-        // 广播终端
+        // 广播获取的在线终端
         $this->debug('broadcastself', 'broadcast connections');
         $json_data = json_encode($data, JSON_UNESCAPED_UNICODE);
         $this->debug('broadcastself - data', $data);
         $this->debug('broadcastself - node_fds', $this->app_server->nodeFDs);
         foreach ($connections as $fd) {
             if(isset($this->app_server->nodeFDs[$fd])){
-                $this->debug('broadcastself', 'slave client fd is '.$fd);
+                $this->debug('broadcastself', 'nodeClient fd is '.$fd);
                 continue;
             }
             $this->server->push($fd, $json_data);
         }
     }
 
-    //TODO:没有广播指定fd终端的需求，因为fd没有任何意义
-
-    // 通知来源终端
+    /**
+     * 回复当前链接。
+     * @param stdClass $data 回复数据
+     * @param bool $encode 如果$data是string格式，则encode为false
+     */
     public function replay($data, $encode = true) {
         $this->push($this->fd, $data, $encode);
     }
 
-    // 通知指定终端
+    /**
+     * 回复指定链接。
+     * @param $fd string 服务器自动生成的整型自增链接ID
+     * @param stdClass $data 回复数据
+     * @param bool $encode 如果$data是string格式，则encode为false
+     */
     public function push($fd, $data, $encode = true) {
         $json_data = $data;
         if($encode){
-            $json_data = json_encode($data, JSON_UNESCAPED_UNICODE);    
+            $json_data = json_encode($data, JSON_UNESCAPED_UNICODE);
         }
         $this->server->push($fd, $json_data);
     }
 
-    // 关闭指定终端
+    /**
+     * 关闭指定链接。
+     * @param $fd string 服务器自动生成的整型自增链接ID
+     */
     public function closefd($fd){
         $this->server->close($fd);
     }
 
-    //绑定的几种状态:
-    //1.无命名空间
-    //list => host->fd (获取当前节点的在线用户);
-    //key-value => host:fd->value (获取当前节点当地前连接的数据)
-    //2.命名空间
-    //list => uid:host->fd (获取当前节点的在线用户);
-    //key-value => host:fd->value (获取当前节点当地前连接的数据)
-    
-    public function bind($uid = '', $value = ''){
+    /**
+     * 当前链接的绑定事件。
+     * 绑定的几种状态:
+     * 1.无分组
+     * host -> fds (获取当前节点的在线链接列表)
+     * host:fd -> value (获取当前节点当前链接的绑定数据)
+     * host:fd:group -> host (获取当前节点当前链接的绑定分组)
+     * 2.有分组
+     * groupID:host -> fds
+     * host:fd -> value
+     * host:fd:group -> groupID:host
+     * @param string $groupID 需要绑定当前链接所在分组的分组标识，如果为空则使用默认分组
+     * @param string $value 需要绑定当前链接对应的业务数据,如果为空则不绑定
+     */
+    public function bind($groupID = '', $value = ''){
         $redis = $this->app_server->provider('redis')->connect();
         $host = $this->app_server->getConfig()['server_config']['host'];
-        if(empty($uid)){
+        // 绑定分组和当前链接对应的分组标识
+        if(empty($groupID)){
             $redis->rpush($host, $this->fd);
-            $redis->set($host.':'.$this->fd, $value);
+            $redis->set($host.':'.$this->fd.':group', $host);
         }else{
-            $redis->rpush($uid.':'.$host, $this->fd);
+            $redis->rpush($groupID.':'.$host, $this->fd);
+            $redis->set($host.':'.$this->fd.':group', $groupID.':'.$host);
+        }
+        // 绑定业务数据
+        if(!empty($value)){
             $redis->set($host.':'.$this->fd, $value);
         }
     }
 
+    /**
+     * 获取当前链接的绑定数据
+     * @return string
+     */
     public function getBindValue(){
         $redis = $this->app_server->provider('redis')->connect();
         $host = $this->app_server->getConfig()['server_config']['host'];
@@ -140,6 +176,11 @@ class Event{
         return $value;
     }
 
+    /**
+     * 记录调试日志
+     * @param string $title 日志内容标题
+     * @param mixed $info 日志数据
+     */
     protected function debug($title, $info){
         $this->app_server->provider('log')->debug($title, $info);
     }
