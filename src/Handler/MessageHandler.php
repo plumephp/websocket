@@ -4,6 +4,11 @@ namespace Plume\WebSocket\Handler;
 
 use Plume\WebSocket\Handler\HandlerException;
 
+/**
+ * WebSocket服务端消息处理器
+ * 数据格式：{url:'modules/eventClassName/action',data:strdata}
+ *
+ */
 class MessageHandler{
 
 	protected $server;
@@ -24,6 +29,14 @@ class MessageHandler{
         $this->key_url = isset($this->app['plume.ws.msg.url.key'])?$this->app['plume.ws.msg.url.key']:'url';
     }
 
+    /**
+     * 消息处理
+     * 1.校验消息格式
+     * 2.解析消息
+     * 3.执行消息处理类
+     * 4.异常处理，当出现错误时直接回复异常到客户端
+     * @throws Plume\WebSocket\Handler\HandlerException 当消息格式不正确时
+     */
     public function handle(){
 		//数据格式约定为JSON
         $msg = json_decode($this->data, true);
@@ -34,8 +47,7 @@ class MessageHandler{
 				throw new HandlerException('data format error : it is json with url and data property?');
 			}
             $classInfo = $this->handleRequest($msg);
-	        //执行url对应类
-            $classInfo['data'] = $this->data;
+	        //执行URL对应类
             $this->exec($classInfo);
         } catch (HandlerException $e) {
             $this->debug('MessageHandler', $e->getMessage());
@@ -43,8 +55,13 @@ class MessageHandler{
         }
     }
 
+    /**
+     * 消息解析
+     * @param json $msg json格式的消息
+     * @return array array('classname' => '', 'action' => '', 'configPath' => '', 'data' => '')
+     * @throws Plume\WebSocket\Handler\HandlerException 当类路径不对或类不存在时
+     */
     public function handleRequest($msg){
-		//URL解析格式 - "module/className/action"
         if(isset($msg['url'])){
             $urlArr = explode('/', $msg['url']);
         }else{
@@ -62,11 +79,17 @@ class MessageHandler{
     	if (!class_exists($classFullName)) {
     		throw new HandlerException("url {$classFullName} is not exist");
     	}
-    	return array('classname' => $classFullName, 'action' => $action, 'configPath' => $configPath);
+    	return array('classname' => $classFullName, 'action' => $action, 'configPath' => $configPath, 'data' => $msg['data']);
 	}
 
-
-	public function exec($classInfo){
+    /**
+     * 执行指定的类方法
+     * 1.获取指定类，方法，参数并初始化该类
+     * 2.执行相应方法
+     * @param array $classInfo 需要执行的类信息 see handleRequest()
+     * @throws Plume\WebSocket\Handler\HandlerException 当执行类方法出现异常时
+     */
+	private function exec($classInfo){
 		$classFullName = $classInfo['classname'];
 		$action = $classInfo['action'];
 		$data = $classInfo['data'];
@@ -80,14 +103,20 @@ class MessageHandler{
         }
     }
 
-    // 回复来源终端
+    /**
+     * 回复当前链接。
+     * @param stdClass $data 回复数据
+     */
     protected function replay($data) {
-        $json_data = json_encode($data, JSON_UNESCAPED_UNICODE);
-        $this->server->push($this->frame->fd, $json_data);
+        $this->server->push($this->frame->fd, json_encode($data, JSON_UNESCAPED_UNICODE));
     }
 
+    /**
+     * 服务器端记录调试信息
+     * @param string $title 日志标题
+     * @param mixed $info 日志数据 string|array
+     */
     private function debug($title, $info){
 		$this->app->provider('log')->debug($title, $info);
 	}
-	
 }

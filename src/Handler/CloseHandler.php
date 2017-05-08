@@ -4,6 +4,9 @@ namespace Plume\WebSocket\Handler;
 
 use Plume\WebSocket\Handler\HandlerException;
 
+/**
+ * WebSocket服务器端链接关闭事件处理
+ */
 class CloseHandler{
 
 	protected $server;
@@ -16,13 +19,22 @@ class CloseHandler{
     	$this->fd = $fd;
     }
 
+    /**
+     * 关闭事件处理
+     * 1.清除用户绑定的数据
+     * 2.依次调用注册关闭事件的类
+     * @throws Plume\WebSocket\Handler\HandlerException 当执行注册的关闭事件类出异常时
+     */
     public function handle(){
-		//清除用户绑定的fd
+		// clear bind fd
 		$redis = $this->app->provider('redis')->connect();
 		$host = $this->app->getConfig()['server']['master']['host'];
-		$result = $redis->lrem($host, $this->fd, 1);
+        $redis->del($host.':'.$this->fd);
+        $groupKey = $redis->get($host.':'.$this->fd.':group');
+        $redis->del($host.':'.$this->fd.':group');
+		$result = $redis->lrem($groupKey, $this->fd, 1);
 		$this->app->provider('log')->debug('close lrem result : ', $result);
-        //依次调用注册事件
+        // invoke close classes
         $config = $this->app->getConfig();
         if(!isset($config['actions_close'])){
         	return;

@@ -18,6 +18,11 @@ use Swoole\Websocket\Server as swoole_websocket_server;
 use Swoole\Http\Request as swoole_http_request;
 use Swoole\Http\response as swoole_http_response;
 
+/**
+ * WebSocket服务器应用
+ * 1.服务器端HTTP获取集群节点信息
+ * 2.集群间广播通信
+ */
 class Application extends App{
 
 	public $host = '127.0.0.1';
@@ -33,6 +38,12 @@ class Application extends App{
         $this['plume.root.path'] = __DIR__.'/../../../../';
     }
 
+    /**
+     * 初始化集群节点链接客户端
+     * 1.初始化未初始化的客户端
+     * 2.检查已有客户端是否可用
+     * @return array 集群节点的客户端链接集合
+     */
     public function initNodes(){
 		//init cluster node clients
 		foreach ($this->nodes as $key => $value) {
@@ -73,6 +84,13 @@ class Application extends App{
         return $this->nodeClients;
     }
 
+    /**
+     * 初始化服务器信息
+     * 1.初始化WebSocket服务
+     * 2.获取集群节点
+     * 3.清空之前的绑定信息
+     * @return swoole_websocket_server
+     */
     private function initServer(){
     	$config = $this->getConfig();
     	//local server config
@@ -95,7 +113,13 @@ class Application extends App{
 		return $server;
     }
 
+    /**
+     * WebSocekt服务器端启动
+     * 1.初始化服务器信息
+     * 2.注册关键事件处理逻辑
+     */
 	public function run(){
+        //默认关闭警告信息
 		//if($this['plume.env'] != 'dev'){
         error_reporting(0);
         //}
@@ -182,6 +206,11 @@ class Application extends App{
 		$server->start();
 	}
 
+    /**
+     * 服务器端记录调试信息
+     * @param string $title 日志标题
+     * @param mixed $info 日志数据 string|array
+     */
 	private function debug($title, $info){
 		$this->provider('log')->debug($title, $info);
 	}
