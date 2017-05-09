@@ -137,7 +137,6 @@ class Application extends App{
 		//open event behind connected
 		$server->on('open',function (swoole_websocket_server $_server , swoole_http_request $request) {
 			$this->debug('open', 'one client has connected');
-            $this->debug('open clients number', count($_server->connections));
 			$header = $request->header;
 			if(isset($header['user-agent']) && ($header['user-agent'] === 'cluster_client')){
 				$this->nodeFDs[$request->fd] = $request->fd;
@@ -163,7 +162,7 @@ class Application extends App{
 		//client closed
 		$server->on('close', function (swoole_websocket_server $_server , $fd) {
 			$this->debug('close', 'fd:'.$fd);
-			//过滤slave client socket的fd
+			//过滤node client socket
 			if(isset($this->nodeFds[$fd])){
 				return;
 			}
@@ -179,18 +178,18 @@ class Application extends App{
 		$server->on('request', function (swoole_http_request $request, swoole_http_response $response) {
 			$this->debug('request', 'it is a http request');
 			// var_dump($request);
-			$server = $request->server;
-			if(isset($server['request_uri']) && (strpos($server['request_uri'], 'wslist') > 0)){
+			//$server = $request->server;
+			//if(isset($server['request_uri']) && (strpos($server['request_uri'], 'wslist') > 0)){
 				//JSON support
-                $config = $this->getConfig();
+            //$config = $this->getConfig();
                 //ws list config
                 //array('ws://127.0.0.1:9501', 'ws://localhost:9502')
-                $wsList = $config['ws_list'];
-				$wsListJson = json_encode($wsList);
-				$response->end("success({$wsListJson});");
-			}else{
+            //    $wsList = $config['ws_list'];
+			//	$wsListJson = json_encode($wsList);
+			//	$response->end("success({$wsListJson});");
+			//}else{
 				$response->end("<h1>This is Swoole WebSocket Server</h1>");
-			}
+                //}
 		});
 
 		// $server->on('handshake', function(swoole_http_request $request, swoole_http_response $response){
