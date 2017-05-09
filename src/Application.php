@@ -121,8 +121,9 @@ class Application extends App{
 	public function run(){
         //默认关闭警告信息
 		//if($this['plume.env'] != 'dev'){
-        error_reporting(0);
+        //error_reporting(0);
         //}
+        error_reporting(E_ERROR|E_PARSE);
 		$server = $this->initServer();
 		//start server process
 		$server->on('WorkerStart', function ($serv, $worker_id){
