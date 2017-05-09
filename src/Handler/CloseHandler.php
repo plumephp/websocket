@@ -26,15 +26,7 @@ class CloseHandler{
      * @throws Plume\WebSocket\Handler\HandlerException 当执行注册的关闭事件类出异常时
      */
     public function handle(){
-		// clear bind fd
-		$redis = $this->app->provider('redis')->connect();
-		$host = $this->app->getConfig()['server_config']['host'];
-        $redis->del($host.':'.$this->fd);
-        $groupKey = $redis->get($host.':'.$this->fd.':group');
-        $redis->del($host.':'.$this->fd.':group');
-		$result = $redis->lrem($groupKey, $this->fd, 1);
-		$this->app->provider('log')->debug('close lrem result : ', $result);
-        // invoke close classes
+		// invoke close classes
         $config = $this->app->getConfig();
         if(!isset($config['actions_close'])){
         	return;
@@ -50,5 +42,13 @@ class CloseHandler{
 	        	throw new HandlerException("call func exception : ".$e->getMessage());
 	        }
         }
+        // clear bind fd
+		$redis = $this->app->provider('redis')->connect();
+		$host = $this->app->getConfig()['server_config']['host'];
+        $redis->del($host.':'.$this->fd);
+        $groupKey = $redis->get($host.':'.$this->fd.':group');
+        $redis->del($host.':'.$this->fd.':group');
+		$result = $redis->lrem($groupKey, $this->fd, 1);
+		$this->app->provider('log')->debug('close lrem result : ', $result);
     }
 }
