@@ -7,7 +7,7 @@
         "plumephp/plume": "dev-master"
     },
     "autoload": {
-        "psr-4": { 
+        "psr-4": {
             "Plume\\WebSocket\\": "src/",
             "PlumeWSService\\": "modules/PlumeWSService/"
         }

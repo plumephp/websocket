@@ -211,6 +211,23 @@ class Event{
     }
 
     /**
+     * 获取指定分组在线数
+     *
+     * @param string $groupId
+     *
+     * @return int online client numbers
+     */
+    public function countByGroup(string $groupID) :int {
+        $redis = $this->app_server->provider('redis')->connect();
+        $host = $this->app_server->getConfig()['server_config']['host'];
+        if(empty($groupID)){
+            return $redis->lLen($host);
+        }else{
+            return $redis->lLen($groupID.':'.$host);
+        }
+    }
+
+    /**
      * 记录调试日志
      * @param string $title 日志内容标题
      * @param mixed $info 日志数据 string|array
