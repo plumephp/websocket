@@ -187,14 +187,23 @@ class Event{
     }
 
     /**
-     * 获取当前链接的绑定数据
+     * 获取当前链接的绑定数据或者返回分组内所有的绑定数据
+     *
      * @return string
      */
-    public function getBindValue(){
+    public function getBindValue(string $groupId = ''){
         $redis = $this->app_server->provider('redis')->connect();
         $host = $this->app_server->getConfig()['server_config']['host'];
-        $value = $redis->get($host.':'.$this->fd);
-        return $value;
+        if(empty($groupId)){
+            return $redis->get($host.':'.$this->fd);
+        }else{
+            $fds = $redis->lRange($groupID.':'.$host, 0, -1);
+            $values = array();
+            foreach($fds as $fd){
+                $values[] = $redis->get($host.':'.$fd);
+            }
+            return $values;
+        }
     }
 
     public function status(){
