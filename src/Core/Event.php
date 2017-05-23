@@ -191,10 +191,10 @@ class Event{
      *
      * @return string
      */
-    public function getBindValue(string $groupId = ''){
+    public function getBindValue(string $groupID = ''){
         $redis = $this->app_server->provider('redis')->connect();
         $host = $this->app_server->getConfig()['server_config']['host'];
-        if(empty($groupId)){
+        if(empty($groupID)){
             return $redis->get($host.':'.$this->fd);
         }else{
             $fds = $redis->lRange($groupID.':'.$host, 0, -1);
