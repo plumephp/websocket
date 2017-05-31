@@ -36,7 +36,9 @@ class CloseHandler{
         	$classFullName = $value;
 			$action = 'close';
 	    	try {
+                $configPath = $this->app['plume.root.path'].'/modules/'.$module.'/';
 		        $class = new $classFullName($this->app, $this->server, $this->fd, true);
+                $class->initModule($configPath, $this->app['plume.env']);
 	        	call_user_func_array(array($class, $action), array());
 	        } catch (\Exception $e) {
 	        	throw new HandlerException("call func exception : ".$e->getMessage());
