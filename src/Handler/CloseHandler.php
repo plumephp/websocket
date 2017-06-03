@@ -37,7 +37,7 @@ class CloseHandler{
 			$action = 'close';
 	    	try {
                 //fix bug:配置文件没有匹配
-                list($modle, $class) = explode('\\', $classFullName);
+                list($module, $class) = explode('\\', $classFullName);
                 $configPath = $this->app['plume.root.path'].'/modules/'.$module.'/';
 		        $class = new $classFullName($this->app, $this->server, $this->fd, true);
                 //fix bug:模块内app对象没有初始化问题
