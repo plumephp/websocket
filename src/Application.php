@@ -123,7 +123,7 @@ class Application extends App{
 		//if($this['plume.env'] != 'dev'){
         //error_reporting(0);
         //}
-        error_reporting(E_ERROR|E_PARSE);
+        //error_reporting(E_ERROR|E_PARSE);
 		$server = $this->initServer();
 		//start server process
 		$server->on('WorkerStart', function ($serv, $worker_id){
