@@ -22,19 +22,18 @@ class Cluster extends Event{
    /**
     * 集群节点通知其他节点后的逻辑实现
     *
-    * @param string $data server json message like {"url":"plumeWSService/cluster/notify","data":"ping","uid":"000001"}
+    * @param string $data server json message like {"url":"plumeWSService/cluster/notify","data":{"uid":"000001"}}
     */
 	public function notify($data){
-		$msg = json_decode($data, true);
-		if(!isset($msg['data'])){
+		if(!isset($data['data'])){
 			$this->debug('notify', 'data is null');
 			return;
 		}
-		$this->debug('notify - data', $msg);
-		if(isset($msg['uid']) && !empty($msg['uid'])){
-			$this->broadcastself($msg['data'], $msg['uid']);
+		$this->debug('notify - data', $data);
+		if(isset($data['uid']) && !empty($data['uid'])){
+			$this->broadcastself($data, $data['uid']);
 		}else{
-			$this->broadcastself($msg['data']);
+			$this->broadcastself($data);
 		}
 	}
 

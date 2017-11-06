@@ -80,7 +80,7 @@ class Event{
             $this->debug('broadcast - notify node info', "host is {$key}");
             $notifyData = new \stdClass();
             $notifyData->url = 'plumeWSService/cluster/notify';
-            $notifyData->uid = $groupID;
+            $data['uid'] = $groupID;
             $notifyData->data = $data;
             $this->debug('broadcast - notify data', $notifyData);
             $nodeClient->send(json_encode($notifyData, JSON_UNESCAPED_UNICODE));
