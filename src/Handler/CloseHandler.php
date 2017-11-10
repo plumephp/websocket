@@ -26,6 +26,10 @@ class CloseHandler{
      * @throws Plume\WebSocket\Handler\HandlerException 当执行注册的关闭事件类出异常时
      */
     public function handle(){
+    	// 客户端下线时，删除集群通信节点
+	    if(isset($this->app->nodeFds[$this->fd])){
+		    unset($this->app->nodeFds[$this->fd]);
+	    }
 		// invoke close classes
         $config = $this->app->getConfig();
         if(!isset($config['actions_close'])){
