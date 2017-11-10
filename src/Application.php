@@ -163,10 +163,6 @@ class Application extends App{
 		//client closed
 		$server->on('close', function (swoole_websocket_server $_server , $fd) {
 			$this->debug('close', 'fd:'.$fd);
-			//过滤node client socket
-			if(isset($this->nodeFds[$fd])){
-				return;
-			}
 		    try {
                 $closeHandler = new CloseHandler($this, $_server, $fd);
                 $closeHandler->handle();
