@@ -53,7 +53,8 @@ class CloseHandler{
         }
         // clear bind fd
 		$redis = $this->app->provider('redis')->connect();
-		$host = $this->app->getConfig()['server_config']['host'];
+		//$host = $this->app->getConfig()['server_config']['host'];
+	    $host = $config['server_config']['host'];
         $redis->del($host.':'.$this->fd);
         $groupKey = $redis->get($host.':'.$this->fd.':group');
         $redis->del($host.':'.$this->fd.':group');
