@@ -108,9 +108,12 @@ class Event{
         }else{
             // 获取所有分组标识在线终端 key = groupID:host
             $this->debug('broadcastself', 'groupID is '.$groupID);
-            $redis = $this->app_server->provider('redis')->connect();
+            $redis = $this->app_server->provider('redis')->useLongConnect();
             $key = $groupID.':'.$this->host;
             $connections = $redis->lrange($key, 0, -1);
+            if(!is_array($connections)){
+                $this->debug('lrange redis exception , key: ' . $key . ' , ', $data);
+            }
         }
         // 广播获取的在线终端
         $this->debug('broadcastself', 'broadcast connections');
@@ -172,7 +175,7 @@ class Event{
      * @param string $value 需要绑定当前链接对应的业务数据,如果为空则不绑定
      */
     public function bind($groupID = '', $value = ''){
-        $redis = $this->app_server->provider('redis')->connect();
+        $redis = $this->app_server->provider('redis')->useLongConnect();
         $host = $this->app_server->getConfig()['server_config']['host'];
         // 绑定分组和当前链接对应的分组标识
         if(empty($groupID)){
@@ -194,7 +197,7 @@ class Event{
      * @return string
      */
     public function getBindValue(string $groupID = ''){
-        $redis = $this->app_server->provider('redis')->connect();
+        $redis = $this->app_server->provider('redis')->useLongConnect();
         $host = $this->app_server->getConfig()['server_config']['host'];
         if(empty($groupID)){
             return $redis->get($host.':'.$this->fd);
@@ -229,7 +232,7 @@ class Event{
      * @return int online client numbers
      */
     public function countByGroup(string $groupID) :int {
-        $redis = $this->app_server->provider('redis')->connect();
+        $redis = $this->app_server->provider('redis')->useLongConnect();
         $host = $this->app_server->getConfig()['server_config']['host'];
         if(empty($groupID)){
             return $redis->lLen($host);
