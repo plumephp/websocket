@@ -103,6 +103,7 @@ class Application extends App{
     	$this->nodes = $config['cluster_nodes'];
         //clear bind fd
     	$redis = $this->provider('redis')->connect();
+		$redis->set('plume__ping' , 'pong');
         $keyList = $redis->keys("*{$this->host}*");
         foreach ($keyList as $key => $value) {
         	$redis->del($value);
