@@ -111,8 +111,9 @@ class Event{
             $redis = $this->app_server->provider('redis')->useLongConnect();
             $key = $groupID.':'.$this->host;
             $connections = $redis->lrange($key, 0, -1);
-            if(!is_array($connections)){
-                $this->debug('lrange redis exception , key: ' . $key . ' , ', $data);
+            if(!is_array($connections)){//redis异常
+                $this->app_server->provider('log')->log('broadcastself_exception' , 'lrange redis exception , key( ' . $key . ')', $data);
+                return;
             }
         }
         // 广播获取的在线终端
