@@ -34,7 +34,7 @@ class CloseHandler{
         $config = $this->app->getConfig();
 	    try {
 		    // clear bind fd
-		    $redis = $this->app->provider('redis')->useLongConnect();
+		    $redis = $this->app->provider('redis')->connect();
 		    $host = $config['server_config']['host'];
 		    $redis->del($host . ':' . $this->fd);
 		    $groupKey = $redis->get($host . ':' . $this->fd . ':group');

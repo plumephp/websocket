@@ -102,12 +102,12 @@ class Application extends App{
         //cluster nodes config
     	$this->nodes = $config['cluster_nodes'];
         //clear bind fd
-    	$redis = $this->provider('redis')->connect();//不能直接使用$this->provider('redis')->useLongConnect()，会递归
-		$redis->set('plume__ping' , 'pong');
+    	$redis = $this->provider('redis')->connect();
         $keyList = $redis->keys("*{$this->host}*");
         foreach ($keyList as $key => $value) {
         	$redis->del($value);
         }
+	    $this->provider('redis')->close();
         //init server
 		$server = new swoole_websocket_server($this->allowIP, $this->port, SWOOLE_PROCESS);
 		$server->set($config['swoole_config']);
