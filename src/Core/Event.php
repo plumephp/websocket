@@ -68,7 +68,7 @@ class Event{
 
     /**
      * 全集群广播事件。对指定数据和分组进行全集群广播。
-     * @param stdClass $data 广播数据
+     * @param \stdClass $data 广播数据
      * @param string $groupID 分组标识
      */
     public function broadcast($data, $groupID = '') {
@@ -91,7 +91,7 @@ class Event{
 
     /**
      * 当前集群节点广播事件。对指定数据和分组对当前集群节点进行广播。
-     * @param stdClass $data 广播数据
+     * @param \stdClass $data 广播数据
      * @param string $groupID 分组标识
      */
     public function broadcastself($data, $groupID = '') {
@@ -137,7 +137,7 @@ class Event{
 
     /**
      * 回复当前链接。
-     * @param stdClass $data 回复数据
+     * @param \stdClass $data 回复数据
      * @param bool $encode 如果$data是string格式，则encode为false
      */
     public function replay($data, $encode = true) {
@@ -147,7 +147,7 @@ class Event{
     /**
      * 回复指定链接。
      * @param $fd string 服务器自动生成的整型自增链接ID
-     * @param stdClass $data 回复数据
+     * @param \stdClass $data 回复数据
      * @param bool $encode 如果$data是string格式，则encode为false
      */
     public function push($fd, $data, $encode = true) {

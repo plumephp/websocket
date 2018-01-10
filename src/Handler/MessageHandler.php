@@ -105,7 +105,7 @@ class MessageHandler{
 
     /**
      * 回复当前链接。
-     * @param stdClass $data 回复数据
+     * @param \stdClass $data 回复数据
      */
     protected function replay($data) {
         $this->server->push($this->frame->fd, json_encode($data, JSON_UNESCAPED_UNICODE));
