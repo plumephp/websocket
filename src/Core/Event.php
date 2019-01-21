@@ -122,11 +122,15 @@ class Event{
 		        return;
 	        }
         }
+        if(is_array($data)){
+            $data['plume_group_id'] = $groupID;
+        }else{
+            $data->plume_group_id = $groupID;
+        }
         // 广播获取的在线终端
         $this->debug('broadcastself', 'broadcast connections');
         $this->debug('broadcastself - data', $data);
         $this->debug('broadcastself - node_fds', $this->app_server->nodeFDs);
-	    $data->plume_group_id = $groupID;
         foreach ($connections as $fd) {
             if(isset($this->app_server->nodeFDs[$fd])){
                 $this->debug('broadcastself', 'nodeClient fd is '.$fd);
